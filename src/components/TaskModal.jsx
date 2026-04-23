@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar, Paperclip, MessageSquare, Plus, Trash2, Check, LayoutDashboard, Flag, User, FileText, ListTodo } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-export default function TaskModal({ task, onClose, onUpdate, session }) {
+export default function TaskModal({ task, onClose, onUpdate, onDelete, session }) {
   const [editedTask, setEditedTask] = useState({ ...task });
   const [newLabel, setNewLabel] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
@@ -10,7 +10,7 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
   const [loading, setLoading] = useState(false);
 
   const priorities = ['Baja', 'Media', 'Alta', 'Urgente'];
-  const statuses = ['Backlog', 'To Do', 'In Progress', 'Done'];
+  const statuses = ['Backlog', 'To Do', 'In Progress', 'Done']; // Si es dinámico se pasa por props
 
   const handleSave = async () => {
     setLoading(true);
@@ -36,6 +36,20 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
       console.error(err);
       alert('Error guardando la tarea');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta tarea permanentemente?")) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('tasks').delete().eq('id', task.id);
+      if (error) throw error;
+      onDelete(task.id);
+    } catch (err) {
+      console.error(err);
+      alert('Error al borrar la tarea');
       setLoading(false);
     }
   };
@@ -98,7 +112,6 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
     <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all">
       <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800">
         
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-[#1E293B]/50">
           <input 
             type="text" 
@@ -112,11 +125,9 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-8">
           <div className="flex-1 space-y-8">
             
-            {/* Etiquetas */}
             <div className="bg-slate-50 dark:bg-[#1E293B]/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                  <Flag size={16} className="text-blue-500"/> Etiquetas
@@ -140,7 +151,6 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
               </div>
             </div>
 
-            {/* Descripción */}
             <div>
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                  <FileText size={16} className="text-purple-500"/> Descripción
@@ -153,7 +163,6 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
               />
             </div>
 
-            {/* Checklist */}
             <div className="bg-slate-50 dark:bg-[#1E293B]/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center justify-between">
                  <span className="flex items-center gap-2"><ListTodo size={16} className="text-emerald-500"/> Checklist</span>
@@ -192,17 +201,17 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
 
           </div>
 
-          {/* Sidebar */}
           <div className="w-full md:w-72 space-y-6">
             
             <div className="bg-slate-50 dark:bg-[#1E293B]/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2"><LayoutDashboard size={14}/> Estado</label>
-              <select 
-                value={editedTask.status} onChange={e => setEditedTask({...editedTask, status: e.target.value})}
-                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-[#0F172A] dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow font-medium"
-              >
-                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <input 
+                type="text" 
+                value={editedTask.status} 
+                onChange={e => setEditedTask({...editedTask, status: e.target.value})}
+                disabled
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-100 dark:bg-[#0B1120] text-slate-500 dark:text-slate-400 outline-none font-medium"
+              />
             </div>
 
             <div className="bg-slate-50 dark:bg-[#1E293B]/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
@@ -245,12 +254,17 @@ export default function TaskModal({ task, onClose, onUpdate, session }) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-[#1E293B]/80 flex justify-end gap-3 rounded-b-2xl backdrop-blur-md">
-          <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
-          <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2">
-            {loading ? 'Guardando...' : <><Check size={18}/> Guardar Cambios</>}
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-[#1E293B]/80 flex justify-between items-center rounded-b-2xl backdrop-blur-md">
+          <button onClick={handleDelete} disabled={loading} className="px-4 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors disabled:opacity-50">
+            <Trash2 size={16}/> Eliminar Tarea
           </button>
+          
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+            <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2">
+              {loading ? 'Guardando...' : <><Check size={18}/> Guardar Cambios</>}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,9 +1,9 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, createContext } from 'react'
 import { supabase } from './lib/supabaseClient'
 import KanbanBoard from './components/KanbanBoard'
+import Dashboard from './components/Dashboard'
 import { Moon, Sun, ArrowRight } from 'lucide-react'
 
-// Crear un contexto para el tema
 export const ThemeContext = createContext()
 
 function App() {
@@ -13,11 +13,12 @@ function App() {
   const [password, setPassword] = useState('')
   const [isLogin, setIsLogin] = useState(true)
   
-  // Estado para el modo oscuro
   const [isDarkMode, setIsDarkMode] = useState(false)
+  
+  // Navigation State
+  const [currentProject, setCurrentProject] = useState(null)
 
   useEffect(() => {
-    // Inicializar tema
     const savedTheme = localStorage.getItem('theme')
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
@@ -30,10 +31,9 @@ function App() {
       setLoading(false)
     })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (!session) setCurrentProject(null)
     })
 
     return () => subscription.unsubscribe()
@@ -76,7 +76,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B1120]">
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-slate-500 dark:text-slate-400 font-medium">Iniciando AzocarSpace...</p>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 font-medium">Cargando...</p>
         </div>
       </div>
     )
@@ -85,16 +85,10 @@ function App() {
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B1120] relative overflow-hidden transition-colors duration-500">
-        
-        {/* Elementos decorativos de fondo */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/20 dark:bg-blue-600/10 blur-[100px] pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/20 dark:bg-purple-600/10 blur-[100px] pointer-events-none"></div>
 
-        {/* Botón de tema */}
-        <button 
-          onClick={toggleTheme}
-          className="absolute top-6 right-6 p-3 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 z-10"
-        >
+        <button onClick={toggleTheme} className="absolute top-6 right-6 p-3 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 z-10">
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
@@ -107,41 +101,20 @@ function App() {
           <form onSubmit={handleAuth} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Correo Electrónico</label>
-              <input
-                className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                required
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <input className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white" type="email" placeholder="tu@email.com" value={email} required onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
-              <input
-                className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <input className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white" type="password" placeholder="••••••••" value={password} required onChange={(e) => setPassword(e.target.value)} />
             </div>
-            <button
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-blue-500/30 flex items-center justify-center gap-2 group disabled:opacity-50"
-            >
+            <button disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-blue-500/30 flex items-center justify-center gap-2 group disabled:opacity-50">
               {loading ? 'Procesando...' : (isLogin ? 'Ingresar a mi espacio' : 'Crear cuenta ahora')}
               {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
           
           <div className="mt-8 text-center border-t border-slate-200 dark:border-slate-700/50 pt-6">
-            <button 
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
+            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors">
               {isLogin ? '¿Nuevo aquí? Regístrate gratis' : '¿Ya tienes cuenta? Inicia sesión'}
             </button>
           </div>
@@ -152,7 +125,19 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
-      <KanbanBoard session={session} />
+      {!currentProject ? (
+        <Dashboard 
+          session={session} 
+          onSelectProject={setCurrentProject}
+          onLogout={() => supabase.auth.signOut()}
+        />
+      ) : (
+        <KanbanBoard 
+          session={session} 
+          project={currentProject}
+          onBack={() => setCurrentProject(null)}
+        />
+      )}
     </ThemeContext.Provider>
   )
 }
