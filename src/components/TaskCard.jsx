@@ -4,7 +4,7 @@ import { Calendar, Paperclip, CheckSquare, MessageSquare } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-export default function TaskCard({ task, index }) {
+export default function TaskCard({ task, index, onClick }) {
   const isDelayed = task.end_date && isPast(parseISO(task.end_date));
   
   const totalSubtasks = task.checklists?.length || 0;
@@ -25,6 +25,7 @@ export default function TaskCard({ task, index }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
+          onClick={onClick}
           className={`bg-white p-4 rounded-xl shadow-sm mb-3 border border-kanban-muted/30
             hover:shadow-md transition-shadow duration-200 group
             ${snapshot.isDragging ? 'shadow-lg rotate-2 scale-105' : ''}
