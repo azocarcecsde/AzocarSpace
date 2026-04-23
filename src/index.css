@@ -1,23 +1,37 @@
 @import "tailwindcss";
-@config "../tailwind.config.js";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   body {
-    @apply bg-kanban-light text-kanban-dark min-h-screen font-sans;
+    @apply bg-slate-50 text-slate-900 transition-colors duration-500 font-sans antialiased;
+  }
+  
+  .dark body {
+    @apply bg-[#0B1120] text-slate-100;
   }
 }
 
 /* Custom scrollbar for Kanban columns */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-kanban-muted rounded-full;
+  @apply bg-slate-300 rounded-full dark:bg-slate-700;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-kanban-primary;
+  @apply bg-slate-400 dark:bg-slate-600;
+}
+
+/* Glassmorphism utilities */
+@utility glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 dark:bg-[#1E293B]/70 dark:border-white/10;
+}
+
+@utility glass-card {
+  @apply bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm dark:bg-[#1E293B]/90 dark:border-slate-700/50 dark:shadow-black/50;
 }

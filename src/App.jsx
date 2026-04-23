@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import { supabase } from './lib/supabaseClient'
 import KanbanBoard from './components/KanbanBoard'
+import { Moon, Sun, ArrowRight } from 'lucide-react'
+
+// Crear un contexto para el tema
+export const ThemeContext = createContext()
 
 function App() {
   const [session, setSession] = useState(null)
@@ -8,8 +12,19 @@ function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLogin, setIsLogin] = useState(true)
+  
+  // Estado para el modo oscuro
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
   useEffect(() => {
+    // Inicializar tema
+    const savedTheme = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true)
+      document.documentElement.classList.add('dark')
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
@@ -23,6 +38,18 @@ function App() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const toggleTheme = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+      setIsDarkMode(false)
+    } else {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+      setIsDarkMode(true)
+    }
+  }
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -45,23 +72,43 @@ function App() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-kanban-light text-kanban-dark">Cargando...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B1120]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-slate-500 dark:text-slate-400 font-medium">Iniciando AzocarSpace...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-kanban-light p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-kanban-muted/20">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-kanban-dark mb-2">AzocarSpace</h1>
-            <p className="text-kanban-muted">Inicia sesión para ver tus tareas</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B1120] relative overflow-hidden transition-colors duration-500">
+        
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/20 dark:bg-blue-600/10 blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/20 dark:bg-purple-600/10 blur-[100px] pointer-events-none"></div>
+
+        {/* Botón de tema */}
+        <button 
+          onClick={toggleTheme}
+          className="absolute top-6 right-6 p-3 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 z-10"
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+
+        <div className="glass p-10 rounded-3xl shadow-2xl w-full max-w-md relative z-10 border border-white/40 dark:border-white/10">
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 drop-shadow-sm">AzocarSpace</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Eleva tu productividad al siguiente nivel</p>
           </div>
           
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-kanban-dark mb-1">Email</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Correo Electrónico</label>
               <input
-                className="w-full px-4 py-2 border border-kanban-muted/50 rounded-lg focus:ring-2 focus:ring-kanban-primary focus:border-kanban-primary outline-none transition-all"
+                className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                 type="email"
                 placeholder="tu@email.com"
                 value={email}
@@ -70,9 +117,9 @@ function App() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-kanban-dark mb-1">Contraseña</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
               <input
-                className="w-full px-4 py-2 border border-kanban-muted/50 rounded-lg focus:ring-2 focus:ring-kanban-primary focus:border-kanban-primary outline-none transition-all"
+                className="w-full px-4 py-3 bg-white/50 dark:bg-[#0F172A]/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -82,19 +129,20 @@ function App() {
             </div>
             <button
               disabled={loading}
-              className="w-full bg-kanban-primary hover:bg-kanban-dark text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-md disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-blue-500/30 flex items-center justify-center gap-2 group disabled:opacity-50"
             >
-              {loading ? 'Cargando...' : (isLogin ? 'Ingresar' : 'Registrarse')}
+              {loading ? 'Procesando...' : (isLogin ? 'Ingresar a mi espacio' : 'Crear cuenta ahora')}
+              {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
           
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center border-t border-slate-200 dark:border-slate-700/50 pt-6">
             <button 
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-kanban-primary hover:text-kanban-dark font-medium transition-colors"
+              className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
             >
-              {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+              {isLogin ? '¿Nuevo aquí? Regístrate gratis' : '¿Ya tienes cuenta? Inicia sesión'}
             </button>
           </div>
         </div>
@@ -102,7 +150,11 @@ function App() {
     )
   }
 
-  return <KanbanBoard session={session} />
+  return (
+    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+      <KanbanBoard session={session} />
+    </ThemeContext.Provider>
+  )
 }
 
 export default App
