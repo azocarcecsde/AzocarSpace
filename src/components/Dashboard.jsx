@@ -62,21 +62,82 @@ export default function Dashboard({ session, onSelectProject, onLogout }) {
 
   const handleJoinProject = async (e) => {
     e.preventDefault();
-    if (!joinCode.trim()) return;
+    const code = joinCode.trim();
+    if (!code) return;
 
     try {
-      const { data, error } = await supabase.rpc('join_project_by_code', {
-        p_invite_code: joinCode.trim(),
+      // Estrategia 1: Intentar con RPC
+      const { data: rpcData, error: rpcError } = await supabase.rpc('join_project_by_code', {
+        p_invite_code: code,
         p_user_email: session.user.email
       });
 
-      if (error) throw error;
+      console.log('RPC Response:', { rpcData, rpcError });
 
-      if (!data.success) {
-        if (data.error === 'INVALID_CODE') alert('Código de proyecto no válido o no existe.');
-        else if (data.error === 'ALREADY_MEMBER') alert('Ya enviaste una solicitud para este proyecto o ya eres miembro.');
-        else if (data.error === 'IS_OWNER') alert('¡Tú eres el creador de este proyecto!');
-        else alert('Error desconocido al unirse.');
+      if (!rpcError && rpcData) {
+        // La función RPC existe y respondió
+        if (rpcData.success) {
+          alert('¡Solicitud enviada! Espera a que el creador del proyecto te apruebe el acceso.');
+          setIsJoining(false);
+          setJoinCode('');
+          return;
+        }
+        if (rpcData.error === 'INVALID_CODE') alert('Código no válido.');
+        else if (rpcData.error === 'ALREADY_MEMBER') alert('Ya enviaste una solicitud o ya eres miembro.');
+        else if (rpcData.error === 'IS_OWNER') alert('¡Tú eres el creador de este proyecto!');
+        return;
+      }
+
+      // Estrategia 2: Fallback directo si RPC no existe o falla
+      console.warn('RPC falló, usando fallback directo. Error:', rpcError?.message);
+
+      // Buscar proyecto directamente (sin RLS, usando .maybeSingle para evitar error 406)
+      const { data: allProjects, error: fetchError } = await supabase
+        .from('projects')
+        .select('id, user_id, invite_code')
+        .order('created_at', { ascending: false });
+
+      console.log('Projects found:', allProjects);
+      console.log('Looking for code:', code);
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        alert('Error al buscar proyectos.');
+        return;
+      }
+
+      // Buscar manualmente ignorando mayúsculas/minúsculas
+      const matchedProject = (allProjects || []).find(
+        p => p.invite_code && p.invite_code.toLowerCase() === code.toLowerCase()
+      );
+
+      console.log('Matched project:', matchedProject);
+
+      if (!matchedProject) {
+        alert('Código de proyecto no válido o no existe. Verifica que el código sea correcto.');
+        return;
+      }
+
+      if (matchedProject.user_id === session.user.id) {
+        alert('¡Tú eres el creador de este proyecto!');
+        return;
+      }
+
+      // Insertar solicitud
+      const { error: insertError } = await supabase
+        .from('project_members')
+        .insert([{
+          project_id: matchedProject.id,
+          user_id: session.user.id,
+          user_email: session.user.email,
+          role: 'member',
+          status: 'pending'
+        }]);
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        if (insertError.code === '23505') alert('Ya enviaste una solicitud o ya eres miembro.');
+        else alert('Error al enviar solicitud: ' + insertError.message);
         return;
       }
 
@@ -84,8 +145,8 @@ export default function Dashboard({ session, onSelectProject, onLogout }) {
       setIsJoining(false);
       setJoinCode('');
     } catch (error) {
-      console.error(error);
-      alert('Error crítico al procesar la solicitud.');
+      console.error('Error completo:', error);
+      alert('Error al procesar la solicitud.');
     }
   };
 
