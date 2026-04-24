@@ -20,6 +20,58 @@ export default function KanbanBoard({ session, project, onBack }) {
 
   useEffect(() => {
     fetchData();
+
+    // Suscripción Realtime para tareas
+    const tasksChannel = supabase
+      .channel(`tasks-${project.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+        filter: `project_id=eq.${project.id}`
+      }, (payload) => {
+        console.log('Realtime task event:', payload.eventType);
+        if (payload.eventType === 'INSERT') {
+          setTasks(prev => {
+            if (prev.find(t => t.id === payload.new.id)) return prev;
+            return [{ ...payload.new, checklists: [], attachments: [], comments: [] }, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setTasks(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTasks(prev => prev.filter(t => t.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    // Suscripción Realtime para columnas
+    const columnsChannel = supabase
+      .channel(`columns-${project.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'columns',
+        filter: `project_id=eq.${project.id}`
+      }, (payload) => {
+        console.log('Realtime column event:', payload.eventType);
+        if (payload.eventType === 'INSERT') {
+          setColumns(prev => {
+            if (prev.find(c => c.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setColumns(prev => prev.map(c => c.id === payload.new.id ? { ...c, ...payload.new } : c));
+        } else if (payload.eventType === 'DELETE') {
+          setColumns(prev => prev.filter(c => c.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    // Limpiar suscripciones al salir del tablero
+    return () => {
+      supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(columnsChannel);
+    };
   }, [project.id]);
 
   async function fetchData() {
