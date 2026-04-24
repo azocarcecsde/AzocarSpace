@@ -21,58 +21,28 @@ export default function KanbanBoard({ session, project, onBack }) {
   useEffect(() => {
     fetchData();
 
-    // Suscripción Realtime para tareas
-    const tasksChannel = supabase
-      .channel(`tasks-${project.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tasks',
-        filter: `project_id=eq.${project.id}`
-      }, (payload) => {
-        console.log('Realtime task event:', payload.eventType);
-        if (payload.eventType === 'INSERT') {
-          setTasks(prev => {
-            if (prev.find(t => t.id === payload.new.id)) return prev;
-            return [{ ...payload.new, checklists: [], attachments: [], comments: [] }, ...prev];
-          });
-        } else if (payload.eventType === 'UPDATE') {
-          setTasks(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTasks(prev => prev.filter(t => t.id !== payload.old.id));
-        }
-      })
-      .subscribe();
+    // Polling cada 4 segundos para sincronización entre usuarios
+    const interval = setInterval(() => {
+      fetchDataSilent();
+    }, 4000);
 
-    // Suscripción Realtime para columnas
-    const columnsChannel = supabase
-      .channel(`columns-${project.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'columns',
-        filter: `project_id=eq.${project.id}`
-      }, (payload) => {
-        console.log('Realtime column event:', payload.eventType);
-        if (payload.eventType === 'INSERT') {
-          setColumns(prev => {
-            if (prev.find(c => c.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
-        } else if (payload.eventType === 'UPDATE') {
-          setColumns(prev => prev.map(c => c.id === payload.new.id ? { ...c, ...payload.new } : c));
-        } else if (payload.eventType === 'DELETE') {
-          setColumns(prev => prev.filter(c => c.id !== payload.old.id));
-        }
-      })
-      .subscribe();
-
-    // Limpiar suscripciones al salir del tablero
-    return () => {
-      supabase.removeChannel(tasksChannel);
-      supabase.removeChannel(columnsChannel);
-    };
+    return () => clearInterval(interval);
   }, [project.id]);
+
+  // Fetch silencioso (sin loading spinner) para el polling
+  async function fetchDataSilent() {
+    try {
+      const [colsRes, tasksRes] = await Promise.all([
+        supabase.from('columns').select('*').eq('project_id', project.id).order('position', { ascending: true }),
+        supabase.from('tasks').select('*, checklists ( id, is_completed, title ), attachments ( id ), comments ( id )').eq('project_id', project.id).order('created_at', { ascending: false })
+      ]);
+
+      if (!colsRes.error && colsRes.data) setColumns(colsRes.data);
+      if (!tasksRes.error && tasksRes.data) setTasks(tasksRes.data);
+    } catch (e) {
+      // Silenciar errores del polling
+    }
+  }
 
   async function fetchData() {
     try {
