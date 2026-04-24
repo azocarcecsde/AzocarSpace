@@ -2,17 +2,21 @@ import React, { useState, useEffect, useContext } from 'react';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
+import ProjectSettingsModal from './ProjectSettingsModal';
 import { supabase } from '../lib/supabaseClient';
-import { Plus, Moon, Sun, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Moon, Sun, ArrowLeft, Edit2, Trash2, Settings } from 'lucide-react';
 import { ThemeContext } from '../App';
 
 export default function KanbanBoard({ session, project, onBack }) {
   const { isDarkMode, toggleTheme } = useContext(ThemeContext);
   const [tasks, setTasks] = useState([]);
-  const [columns, setColumns] = useState([]); // Array de objetos {id, title, position}
+  const [columns, setColumns] = useState([]); 
   const [editingColumn, setEditingColumn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const isOwner = project.user_id === session.user.id;
 
   useEffect(() => {
     fetchData();
@@ -150,14 +154,23 @@ export default function KanbanBoard({ session, project, onBack }) {
             <ArrowLeft size={24} />
           </button>
           <div>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent drop-shadow-sm">{project.name}</h1>
+            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent drop-shadow-sm flex items-center gap-3">
+              {project.name}
+              {!isOwner && <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">Colaborador</span>}
+            </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Gestión de proyecto</p>
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-            <button onClick={toggleTheme} className="p-2.5 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 shadow-sm">
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            {isOwner && (
+              <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 shadow-sm" title="Gestión de Equipo">
+                <Settings size={20} />
+              </button>
+            )}
+            <button onClick={toggleTheme} className="p-2.5 rounded-full glass hover:scale-105 transition-transform text-slate-700 dark:text-slate-300 shadow-sm" title="Cambiar Tema">
+              <Sun size={20} className="hidden dark:block" />
+              <Moon size={20} className="block dark:hidden" />
             </button>
             <button onClick={createDummyTask} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20 font-semibold">
               <Plus size={20} /> Nueva Tarea
@@ -239,6 +252,13 @@ export default function KanbanBoard({ session, project, onBack }) {
             setTasks(tasks.filter(t => t.id !== taskId));
             setSelectedTask(null);
           }}
+        />
+      )}
+
+      {showSettings && (
+        <ProjectSettingsModal
+          project={project}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>
