@@ -69,7 +69,7 @@ export default function Dashboard({ session, onSelectProject, onLogout }) {
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('id')
-        .eq('invite_code', joinCode.trim().toUpperCase())
+        .ilike('invite_code', joinCode.trim())
         .single();
 
       if (projectError || !projectData) {
