@@ -25,10 +25,11 @@ export default function TaskCard({ task, index, onClick }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
+          style={provided.draggableProps.style}
           onClick={onClick}
           className={`bg-white dark:bg-[#0F172A] p-5 rounded-xl shadow-sm mb-4 border 
-            hover:shadow-md dark:hover:shadow-black/50 transition-all duration-200 group cursor-pointer
-            ${snapshot.isDragging ? 'shadow-xl dark:shadow-blue-900/20 rotate-2 scale-105 ring-2 ring-blue-500' : 'border-slate-200 dark:border-slate-700/80'}
+            hover:shadow-md dark:hover:shadow-black/50 transition-shadow transition-colors duration-200 group cursor-pointer
+            ${snapshot.isDragging ? 'shadow-xl dark:shadow-blue-900/20 ring-2 ring-blue-500' : 'border-slate-200 dark:border-slate-700/80'}
             ${isDelayed ? 'border-red-300 dark:border-red-500/50 bg-red-50/50 dark:bg-red-900/10' : ''}
           `}
         >
