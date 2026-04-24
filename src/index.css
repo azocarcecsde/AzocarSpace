@@ -33,5 +33,5 @@
 }
 
 @utility glass-card {
-  @apply bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm dark:bg-[#1E293B]/90 dark:border-slate-700/50 dark:shadow-black/50;
+  @apply bg-white border border-slate-200 shadow-sm dark:bg-[#1E293B] dark:border-slate-700/50 dark:shadow-black/50;
 }
