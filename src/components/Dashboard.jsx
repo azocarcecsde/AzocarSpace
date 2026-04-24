@@ -65,40 +65,27 @@ export default function Dashboard({ session, onSelectProject, onLogout }) {
     if (!joinCode.trim()) return;
 
     try {
-      // 1. Buscar el proyecto por código
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .select('id')
-        .ilike('invite_code', joinCode.trim())
-        .single();
+      const { data, error } = await supabase.rpc('join_project_by_code', {
+        p_invite_code: joinCode.trim(),
+        p_user_email: session.user.email
+      });
 
-      if (projectError || !projectData) {
-        alert('Código de proyecto no válido o no existe.');
+      if (error) throw error;
+
+      if (!data.success) {
+        if (data.error === 'INVALID_CODE') alert('Código de proyecto no válido o no existe.');
+        else if (data.error === 'ALREADY_MEMBER') alert('Ya enviaste una solicitud para este proyecto o ya eres miembro.');
+        else if (data.error === 'IS_OWNER') alert('¡Tú eres el creador de este proyecto!');
+        else alert('Error desconocido al unirse.');
         return;
       }
 
-      // 2. Crear la solicitud pendiente
-      const { error: joinError } = await supabase
-        .from('project_members')
-        .insert([{
-          project_id: projectData.id,
-          user_id: session.user.id,
-          user_email: session.user.email,
-          role: 'member',
-          status: 'pending'
-        }]);
-
-      if (joinError) {
-        if (joinError.code === '23505') alert('Ya enviaste una solicitud para este proyecto o ya eres miembro.');
-        else throw joinError;
-      } else {
-        alert('¡Solicitud enviada! Espera a que el creador del proyecto te apruebe el acceso.');
-        setIsJoining(false);
-        setJoinCode('');
-      }
+      alert('¡Solicitud enviada! Espera a que el creador del proyecto te apruebe el acceso.');
+      setIsJoining(false);
+      setJoinCode('');
     } catch (error) {
       console.error(error);
-      alert('Error al procesar la solicitud.');
+      alert('Error crítico al procesar la solicitud.');
     }
   };
 
