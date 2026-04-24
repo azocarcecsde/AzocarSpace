@@ -190,7 +190,7 @@ export default function Dashboard({ session, onSelectProject, onLogout }) {
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
                   placeholder="Ej: AZO-X7B9M"
-                  className="w-full bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-purple-500 mb-4 font-medium shadow-inner uppercase"
+                  className="w-full bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-purple-500 mb-4 font-medium shadow-inner"
                 />
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setIsJoining(false)} className="flex-1 px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-bold transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">Cancelar</button>
